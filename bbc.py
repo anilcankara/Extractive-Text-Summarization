@@ -6,6 +6,7 @@ import numpy
 from copy import deepcopy
 from rouge import Rouge
 import re
+from operator import itemgetter
 
 #HER ŞEYİ LOWERCASE YAP
 #FOR LOOPLAR SIRALI MI DÖNÜYOR BAK
@@ -57,7 +58,7 @@ def sent2vec(docs_by_sentences):
     for key in docs_by_sentences:
     	allSentences = []
     	sentences = docs_by_sentences[key]
-    	for sentence in sentences:
+    	for position, sentence in enumerate(sentences):
     		sentence = sentence.strip()
     		if sentence == "":
     			continue
@@ -75,7 +76,7 @@ def sent2vec(docs_by_sentences):
     		if divider == 0:    # it means none of the words in the sentence are in the vocabulary
     		    continue      
     		sentenceVector = [x / divider for x in sentenceVector]
-    		allSentences.append([sentenceVector, sentence])
+    		allSentences.append([sentenceVector, sentence, position])
     	docs_as_vectors[key] = allSentences
     return docs_as_vectors
 
@@ -107,12 +108,14 @@ def recalculate_centers(clusters, oldCenters):
 def pick_most_representative(cluster, clusterCenter):
 	minDistance = float('inf')
 	representativeSentence = ""
+	representativePosition = 0
 	for sentenceWithString in cluster:
 		distance = calculate_distance(sentenceWithString[0], clusterCenter)
 		if distance < minDistance:
 			minDistance = distance
 			representativeSentence = sentenceWithString[1]
-	return representativeSentence
+			representativePosition = sentenceWithString[2]
+	return [representativeSentence, representativePosition]
 
 
 
@@ -186,12 +189,17 @@ def cluster(docs_as_vectors, isFixedKModel):
 
     	# Pick the most representative sentence from each cluster
     	summary = []
+    	summaryWithPositions = []
     	for index, cluster in enumerate(cList):
     		if len(cluster) != 0:
     			representative = pick_most_representative(cluster, clusterCenters[index])
-    			summary.append(representative.strip())
+    			summaryWithPositions.append(representative)  
     	
-    	
+    	print("Summary with positions: " + str(summaryWithPositions))
+    	sortedByPositions = sorted(summaryWithPositions, key=itemgetter(1))
+    	print("Sorted by positions: " + str(sortedByPositions))
+    	for element in sortedByPositions:
+    		summary.append(element[0])
     	summaryString = ""
     	for sentence in summary:
     		summaryString = summaryString + sentence + ". "
@@ -260,7 +268,7 @@ def evaluation(gold_summaries, extracted_summaries):
     validation_scores.append(val_2)
     validation_scores.append(val_l)
 
-    print("Validation scores are: " + str(validation_scores))
+    #print("Validation scores are: " + str(validation_scores))
     return validation_scores
 
 
@@ -307,21 +315,49 @@ model2_validation_scores = evaluation(gold_train_set, extracted_train_set2)  # E
 model1_test_scores = evaluation(gold_test_set, extracted_test_set1)  # Evaluation for model 1
 model2_test_scores = evaluation(gold_test_set, extracted_test_set2)  # Evaluation for model 2
 
-print("VALIDATION SCORES")
-print("Model 1:")
-for element in model1_validation_scores:
-	print(element)
-print("Model 2:")
-for element in model2_validation_scores:
-	print(element)
 
-print("TEST SCORES")
-print("Model 1:")
-for element in model1_test_scores:
-	print(element)
-print("Model 2:")
-for element in model2_test_scores:
-	print(element)
+print("RESULTS FOR MODEL 1:")
+print("")
+print("Validation Scores: ")
+for i, element in enumerate(model1_validation_scores):
+	if i == 0:
+		print("Rouge 1: " + str(element))
+	elif i == 1: 
+		print("Rouge 2: " + str(element))
+	else:
+		print("Rouge L: " + str(element))
+
+print("")
+print("Test Scores: ")
+for i, element in enumerate(model1_test_scores):
+	if i == 0:
+		print("Rouge 1: " + str(element))
+	elif i == 1: 
+		print("Rouge 2: " + str(element))
+	else:
+		print("Rouge L: " + str(element))
+
+print("")
+print("RESULTS FOR MODEL 2:")
+print("")
+print("Validation Scores: ")
+for i, element in enumerate(model2_validation_scores):
+	if i == 0:
+		print("Rouge 1: " + str(element))
+	elif i == 1: 
+		print("Rouge 2: " + str(element))
+	else:
+		print("Rouge L: " + str(element))
+
+print("")
+print("Test Scores: ")
+for i, element in enumerate(model2_test_scores):
+	if i == 0:
+		print("Rouge 1: " + str(element))
+	elif i == 1: 
+		print("Rouge 2: " + str(element))
+	else:
+		print("Rouge L: " + str(element))
 
 
 #model1scores = evaluation(gold_summaries, extracted_summaries1)  # Evaluation for model 1
